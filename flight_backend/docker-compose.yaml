@@ -5,10 +5,21 @@ services:
     ports:
       - "6379:6379"
 
-  celery:
+  celery_worker:
     build: .
-    container_name: celery_worker
+    container_name: celery_worker_2
     command: celery -A flight_backend worker --loglevel=info
+    depends_on:
+      - redis
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DATABASE_URL=postgresql://postgres:LmaoY33t!@host.docker.internal:5432/flightDB
+
+  celery_beat:
+    build: .
+    container_name: celery_beat
+    command: celery -A flight_backend beat --loglevel=info
     depends_on:
       - redis
     environment:

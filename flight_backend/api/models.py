@@ -22,6 +22,10 @@ class Flight(models.Model):
     gate = models.CharField(max_length=10, blank=True, null=True)
     terminal = models.CharField(max_length=10, blank=True, null=True)
 
+    live_latitude = models.FloatField(blank=True, null=True)
+    live_longitude = models.FloatField(blank=True, null=True)
+    live_updated = models.DateTimeField(blank=True, null=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
