@@ -5,30 +5,33 @@ from decouple import config
 from .models import Flight
 
 @shared_task
-def fetch_and_store_flight_data():
-    API_KEY = config('AVIATIONSTACK_API_KEY')
-    
+def as_flight_data():
+    PRIMARY_API_KEY = config('AVIATIONSTACK_API_KEY')
+    ALT_API_KEY = config('AVIATIONSTACK_API_KEY_2')  
     url = "http://api.aviationstack.com/v1/flights"
-    params = {
-        "access_key": API_KEY,
-    }
     
-    try:
+    def get_data(api_key):
+        params = {"access_key": api_key}
         response = requests.get(url, params=params)
         response.raise_for_status()
-        data = response.json()
+        return response.json()
+    
+    try:
+        data = get_data(PRIMARY_API_KEY)
+        if "error" in data:
+            error_message = data["error"].get("message", "").lower()
+            if "quota" in error_message or "limit" in error_message:
+                print("Primary API key exhausted, switching to alternate key")
+                data = get_data(ALT_API_KEY)
     except requests.RequestException as e:
         print("Error fetching flight data:", e)
         return "Error fetching flight data"
-    
-    # Process each flight in the response
+
     for flight_info in data.get("data", []):
-        # Ensure the record is a dict before processing
         if not isinstance(flight_info, dict):
             print("Skipping record that is not a dict:", flight_info)
             continue
 
-        # Extract basic flight data
         flight_date = flight_info.get("flight_date")
         flight_status = flight_info.get("flight_status", "scheduled")
         
@@ -44,7 +47,7 @@ def fetch_and_store_flight_data():
         origin = departure.get("airport", "")
         destination = arrival.get("airport", "")
 
-        if not flight_number or not airline or not origin or not destination:
+        if not flight_number or not airline or not origin or not destination or not aircraft_data:
             print("Skipping record due to missing required fields:", flight_info)
             continue
 

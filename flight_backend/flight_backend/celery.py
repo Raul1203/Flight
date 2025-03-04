@@ -9,8 +9,8 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
 app.conf.beat_schedule = {
-    'fetch-flight-data-daily': {
-        'task': 'api.tasks.fetch_and_store_flight_data', 
-        'schedule': crontab(hour=0, minute=0),
+       'fetch-other-data-hourly': {
+        'task': 'api.tasks.as_flight_data', 
+        'schedule': crontab(minute=0, hour='*/3'),
     },
 }
