@@ -1,5 +1,7 @@
 from django.db import models
 
+
+
 class Flight(models.Model):
     flight_number = models.CharField(max_length=10, unique=True)
     airline = models.CharField(max_length=100)
@@ -39,11 +41,18 @@ class DayWithMostFlights(models.Model):
     flight_count = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
 
+class AirplaneLocation(models.Model):
+    day_statistic = models.ForeignKey(DayWithMostFlights, on_delete=models.CASCADE, related_name='locations')
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+
 
 class MostVisitedDestination(models.Model):
     month = models.DateField()
     destination = models.CharField(max_length=255)
     visit_count = models.IntegerField()
+    rank = models.IntegerField(default=0)
+    latest_landing = models.DateTimeField(null=True, blank= True)
     created_at = models.DateTimeField(auto_now_add=True)
 
 
@@ -51,4 +60,5 @@ class AircraftWithMostFlights(models.Model):
     month = models.DateField()
     aircraft = models.CharField(max_length=255)
     flight_count = models.IntegerField()
+    rank = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)

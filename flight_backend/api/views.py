@@ -1,7 +1,24 @@
-from rest_framework.viewsets import ReadOnlyModelViewSet
-from .models import Flight
-from .serializers import FlightSerializer
+from rest_framework import viewsets
+from .models import Flight, AircraftWithMostFlights, DayWithMostFlights, MostVisitedDestination
+from .serializers import (
+    FlightSerializer, 
+    AircraftSerializer, 
+    MostFlightSerializer, 
+    TopDestinationSerializer
+)
 
-class FlightViewSet(ReadOnlyModelViewSet):  
+class FlightViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Flight.objects.all()
     serializer_class = FlightSerializer
+
+class AircraftViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = AircraftWithMostFlights.objects.all().order_by('-month')
+    serializer_class = AircraftSerializer
+
+class MostFlightViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = DayWithMostFlights.objects.all().order_by('-month')
+    serializer_class = MostFlightSerializer
+
+class TopDestinationViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = MostVisitedDestination.objects.all().order_by('-month')
+    serializer_class = TopDestinationSerializer
