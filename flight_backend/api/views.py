@@ -16,7 +16,7 @@ class AircraftViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AircraftSerializer
 
 class MostFlightViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = DayWithMostFlights.objects.all().order_by('-month')
+    queryset = DayWithMostFlights.objects.all().order_by('-month').prefetch_related('locations')
     serializer_class = MostFlightSerializer
 
 class TopDestinationViewSet(viewsets.ReadOnlyModelViewSet):

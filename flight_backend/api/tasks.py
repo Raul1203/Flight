@@ -2,7 +2,16 @@ import requests
 from celery import shared_task
 from django.utils.dateparse import parse_datetime
 from decouple import config
-from .models import Flight
+from django.db.models import Count, Max
+from django.db.models.functions import TruncDay
+from django.utils.timezone import now
+from .models import (
+    Flight,
+    MostVisitedDestination,
+    AircraftWithMostFlights,
+    DayWithMostFlights,
+    AirplaneLocation
+)
 
 @shared_task
 def as_flight_data():
@@ -82,4 +91,124 @@ def as_flight_data():
                     "live_updated": live_updated,
                 }
             )
+    update_flight_statistics.delay()        
     return "Flight data updated successfully"
+
+@shared_task
+def update_flight_statistics():
+    current_date = now().date()
+    current_month = current_date.replace(day=1)
+    
+    # --- Top 3 Destinations with Most Landings ---
+    destinations = (
+        Flight.objects.filter(departure_time__year=current_date.year, departure_time__month=current_date.month)
+        .values('destination')
+        .annotate(visit_count=Count('id'), latest_landing=Max('departure_time'))
+        .order_by('-visit_count', '-latest_landing')[:3]
+    )
+    for rank, dest in enumerate(destinations, start=1):
+        record = MostVisitedDestination.objects.filter(month=current_month, rank=rank).first()
+        if record:
+            if dest['visit_count'] > record.visit_count or (
+                dest['visit_count'] == record.visit_count and dest['latest_landing'] > record.latest_landing
+            ):
+                record.destination = dest['destination']
+                record.visit_count = dest['visit_count']
+                record.latest_landing = dest['latest_landing']
+                record.save()
+        else:
+            MostVisitedDestination.objects.create(
+                month=current_month,
+                destination=dest['destination'],
+                visit_count=dest['visit_count'],
+                latest_landing=dest['latest_landing'],
+                rank=rank
+            )
+    
+    # --- Top 3 Aircraft with Most Flights ---
+    aircrafts = (
+        Flight.objects.filter(departure_time__year=current_date.year, departure_time__month=current_date.month)
+        .values('aircraft', 'airline')
+        .annotate(flight_count=Count('id'))
+        .order_by('-flight_count')[:3]
+    )
+
+    for rank, ac in enumerate(aircrafts, start=1):
+        record = AircraftWithMostFlights.objects.filter(month=current_month, rank=rank).first()
+        if record:
+            if ac['flight_count'] > record.flight_count:
+                record.aircraft = ac['aircraft']
+                record.airline = ac['airline']
+                record.flight_count = ac['flight_count']
+                record.save()
+        else:
+            AircraftWithMostFlights.objects.create(
+                month=current_month,
+                aircraft=ac['aircraft'],
+                airline=ac['airline'],
+                flight_count=ac['flight_count'],
+                rank=rank
+            )
+    
+    # --- Day with Most Flights and Flight Positions ---
+    day_stats = (
+    Flight.objects.filter(departure_time__year=current_date.year, departure_time__month=current_date.month)
+    .annotate(day=TruncDay('departure_time'))
+    .values('day')
+    .annotate(flight_count=Count('id'))
+    .order_by('-flight_count')
+    )
+
+    if day_stats.exists():  # Prevent IndexError
+        top_day_data = day_stats[0]
+        record = DayWithMostFlights.objects.filter(month=current_month).first()
+
+        if record:
+            if top_day_data['flight_count'] >= record.flight_count:  # Ensure updates if same count
+                record.day = top_day_data['day']
+                record.flight_count = top_day_data['flight_count']
+                record.save()
+
+                record.locations.all().delete()  
+
+                flights_on_top_day = Flight.objects.filter(departure_time__date=top_day_data['day'])
+                for flight in flights_on_top_day:
+                    lat = flight.live_latitude
+                    lon = flight.live_longitude
+                    dest = None
+                    if lat is None and flight.status.lower() == 'landed':
+                        dest = flight.destination  
+
+                    AirplaneLocation.objects.create(
+                        day_statistic=record,
+                        latitude=lat,
+                        longitude=lon,
+                        status=flight.status,
+                        airline=flight.airline,
+                        aircraft=flight.aircraft,
+                        destination=dest,
+                    )
+        else:
+            record = DayWithMostFlights.objects.create(
+                month=current_month,
+                day=top_day_data['day'],
+                flight_count=top_day_data['flight_count']
+            )
+
+            flights_on_top_day = Flight.objects.filter(departure_time__date=top_day_data['day'])
+            for flight in flights_on_top_day:
+                lat = flight.live_latitude
+                lon = flight.live_longitude
+                dest = None
+                if lat is None and flight.status.lower() == 'landed':
+                    dest = flight.destination
+
+                AirplaneLocation.objects.create(
+                    day_statistic=record,
+                    latitude=lat,
+                    longitude=lon,
+                    status=flight.status,
+                    airline=flight.airline,
+                    aircraft=flight.aircraft,
+                    destination=dest,
+                )

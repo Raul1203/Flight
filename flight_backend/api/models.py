@@ -43,8 +43,12 @@ class DayWithMostFlights(models.Model):
 
 class AirplaneLocation(models.Model):
     day_statistic = models.ForeignKey(DayWithMostFlights, on_delete=models.CASCADE, related_name='locations')
-    latitude = models.FloatField()
-    longitude = models.FloatField()
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    status = models.CharField(max_length=50, null=True, blank=True)
+    airline = models.CharField(max_length=255, null=True, blank=True)
+    aircraft = models.CharField(max_length=50, null=True, blank=True)
+    destination = models.CharField(max_length=255, null=True, blank=True)
 
 
 class MostVisitedDestination(models.Model):
@@ -59,6 +63,8 @@ class MostVisitedDestination(models.Model):
 class AircraftWithMostFlights(models.Model):
     month = models.DateField()
     aircraft = models.CharField(max_length=255)
+    airline = models.CharField(max_length=255, null=True, blank=True)
     flight_count = models.IntegerField()
     rank = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+

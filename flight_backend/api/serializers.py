@@ -10,23 +10,23 @@ class FlightSerializer(serializers.ModelSerializer):
 class AircraftSerializer(serializers.ModelSerializer):
     class Meta:
         model = AircraftWithMostFlights
-        fields = ['month', 'aircraft', 'flight_count']
+        fields = ['month', 'aircraft', 'airline', 'flight_count']
 
 
 class LocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = AirplaneLocation
-        fields = ['latitude', 'longitude']
+        fields = ['latitude', 'longitude', 'status', 'airline', 'aircraft', 'destination']
 
 class MostFlightSerializer(serializers.ModelSerializer):
-    location = LocationSerializer(many = True, read_only = True)
+    locations = LocationSerializer(many = True, read_only = True)
 
     class Meta:
         model = DayWithMostFlights
-        fields = ['month', 'day', 'flight_count', 'location']
+        fields = ['month', 'day', 'flight_count', 'locations']
 
 
 class TopDestinationSerializer(serializers.ModelSerializer):
     class Meta:
         model = MostVisitedDestination
-        fields = ['month', 'destianation', 'visit_count']
+        fields = ['month', 'destination', 'visit_count']
