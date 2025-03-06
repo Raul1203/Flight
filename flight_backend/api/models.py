@@ -68,3 +68,12 @@ class AircraftWithMostFlights(models.Model):
     rank = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
+class AirportWithMostDepartures(models.Model):
+    month = models.DateField(unique=True)
+    airport = models.CharField(max_length=255)
+    departure_count = models.IntegerField()
+    airline_departure_counts = models.JSONField()  
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.month} - {self.airport} ({self.departure_count} departures)"

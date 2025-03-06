@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Flight, AircraftWithMostFlights, DayWithMostFlights, MostVisitedDestination,AirplaneLocation
+from .models import Flight, AircraftWithMostFlights, DayWithMostFlights, \
+        MostVisitedDestination, AirplaneLocation, AirportWithMostDepartures
 
 class FlightSerializer(serializers.ModelSerializer):
     class Meta:
@@ -30,3 +31,9 @@ class TopDestinationSerializer(serializers.ModelSerializer):
     class Meta:
         model = MostVisitedDestination
         fields = ['month', 'destination', 'visit_count']
+
+
+class AirportWithMostDeparturesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AirportWithMostDepartures
+        fields = ['month', 'airport', 'departure_count', 'airline_departure_counts']

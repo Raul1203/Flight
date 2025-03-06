@@ -10,7 +10,8 @@ from .models import (
     MostVisitedDestination,
     AircraftWithMostFlights,
     DayWithMostFlights,
-    AirplaneLocation
+    AirplaneLocation,
+    AirportWithMostDepartures
 )
 
 @shared_task
@@ -159,7 +160,7 @@ def update_flight_statistics():
     .order_by('-flight_count')
     )
 
-    if day_stats.exists():  # Prevent IndexError
+    if day_stats.exists():  
         top_day_data = day_stats[0]
         record = DayWithMostFlights.objects.filter(month=current_month).first()
 
@@ -212,3 +213,37 @@ def update_flight_statistics():
                     aircraft=flight.aircraft,
                     destination=dest,
                 )
+
+# --- Airport with most departures ---
+    airport_stats = (
+        Flight.objects.filter(departure_time__year=current_date.year, departure_time__month=current_date.month)
+        .values('origin')
+        .annotate(departure_count=Count('id'))
+        .order_by('-departure_count')
+    )
+
+    if airport_stats:
+        top_airport_data = airport_stats[0]
+        airport_code = top_airport_data['origin']
+        departure_count = top_airport_data['departure_count']
+
+        airline_stats = (
+            Flight.objects.filter(
+                departure_time__year=current_date.year,
+                departure_time__month=current_date.month,
+                origin=airport_code
+            )
+            .values('airline')
+            .annotate(airline_count=Count('id'))
+            .order_by('-airline_count')
+        )
+
+        airline_counts = {entry['airline']: entry['airline_count'] for entry in airline_stats}
+        AirportWithMostDepartures.objects.update_or_create(
+            month=current_month,
+            defaults={
+                'airport': airport_code,
+                'departure_count': departure_count,
+                'airline_departure_counts': airline_counts
+            }
+        )
